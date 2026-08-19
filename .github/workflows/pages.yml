@@ -28,9 +28,21 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Deploy Abigail API
+        id: api
+        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          secrets: |
+            OPENAI_API_KEY
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       - run: npm run build
         env:
           BASE_PATH: ${{ steps.pages.outputs.base_path }}/
+          VITE_ABIGAIL_API_URL: ${{ steps.api.outputs.deployment-url }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

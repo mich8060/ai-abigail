@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import https from 'node:https'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Plugin } from 'vite'
-import { ABIGAIL_SYSTEM_PROMPT } from '../src/lib/prompt.ts'
+import { openaiMessages, type ChatTurn } from './abigailChat.ts'
 
 type Options = {
   apiKey: string
@@ -10,7 +10,7 @@ type Options = {
 }
 
 type ChatBody = {
-  messages?: Array<{ role?: string; text?: string }>
+  messages?: ChatTurn[]
   userName?: string
 }
 
@@ -123,24 +123,7 @@ export function abigailApiPlugin(options: Options): Plugin {
     try {
       const parsed = JSON.parse(await readBody(req)) as ChatBody
       const history = Array.isArray(parsed.messages) ? parsed.messages : []
-      const first = String(parsed.userName ?? '').trim().split(/\s+/)[0] ?? ''
-      const userName = first.replace(/[^\p{L}\p{M}'-]/gu, '').slice(0, 24)
-      const who = userName
-        ? userName.charAt(0).toUpperCase() + userName.slice(1)
-        : 'them'
-      const messages = [
-        {
-          role: 'system',
-          content: `${ABIGAIL_SYSTEM_PROMPT}
-
-THE PERSON IN THIS CHAT
-Their first name is ${who}. Address them as ${who} the way you address Michael in the examples — sparingly, as a jab or a greeting, not every sentence. Do not assume they are Michael unless their name is Michael.`,
-        },
-        ...history.slice(-18).map((message) => ({
-          role: message.role === 'user' ? 'user' : 'assistant',
-          content: String(message.text ?? ''),
-        })),
-      ]
+      const messages = openaiMessages(parsed.userName, history)
 
       const { status, data } = await chatCompletion(
         options.apiKey,

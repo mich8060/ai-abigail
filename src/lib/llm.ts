@@ -1,10 +1,18 @@
 import type { ChatMessage } from '../types'
 
+function abigailApiUrl(): string {
+  const hosted = import.meta.env.VITE_ABIGAIL_API_URL
+  if (typeof hosted === 'string' && hosted.trim()) {
+    return hosted.trim().replace(/\/$/, '')
+  }
+  return `${import.meta.env.BASE_URL}api/abigail`
+}
+
 export async function askAbigailLlm(
   history: ChatMessage[],
   userName: string,
 ): Promise<string> {
-  const response = await fetch(`${import.meta.env.BASE_URL}api/abigail`, {
+  const response = await fetch(abigailApiUrl(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
